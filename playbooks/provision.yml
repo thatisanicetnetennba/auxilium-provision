@@ -1,0 +1,5 @@
+- hosts: pve
+  gather_facts: no
+  become: yes
+  roles:
+    - role: pve_provision_vm

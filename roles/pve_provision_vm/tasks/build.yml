@@ -1,0 +1,41 @@
+---
+- name: Download cloud-init image
+  get_url:
+    url: "{{ image_base_url }}/{{ image }}"
+    dest: "{{ image_location }}"
+  when: image_refresh
+  
+- name: Generate ID
+  shell: "pvesh get /cluster/nextid"
+  register: image_id_res
+  
+- name: Set ID fact
+  set_fact: 
+    image_id: "{{ image_id_res.stdout }}"
+    template_id: image_id
+  
+- name: Create VM
+  shell: "qm create {{ image_id }} --memory {{ image_mem }} --net0 virtio,bridge={{ image_bridge }} --name {{ image }}-$(date '+%Y%m%d%H%M%S')"
+  
+- name: Import cloud-init image to disk
+  shell: "qm importdisk {{ image_id }} {{ image_location }}/{{ image }} {{ image_storage }}"
+  
+- name: Add cloud-init disk
+  shell: "qm set {{ image_id }} --scsihw virtio-scsi-pci --scsi0 {{ image_storage }}:vm-{{ image_id }}-disk-0"
+  
+- name: Set bootdisk to cloud-init disk
+  shell: "qm set {{ image_id }} --boot c --bootdisk scsi0"
+
+- name: Add cloud-init device
+  shell: "qm set {{ image_id }} --ide2 {{ image_storage }}:cloudinit"
+  
+- name: Configure serial console
+  shell: "qm set {{ image_id }} --serial0 socket --vga serial0"
+  
+- name: Convert VM to template
+  shell: "qm template {{ image_id }}"
+
+- name: Set template_id for new VM
+  set_fact:
+    template_id: "{{ image_id }}"
+  when: provision_vm | default(true)

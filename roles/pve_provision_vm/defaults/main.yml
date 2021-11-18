@@ -1,0 +1,25 @@
+image_refresh: true
+image_location: /mnt/pve/iso/template/iso
+image: bionic-server-cloudimg-amd64.img
+image_base_url: https://cloud-images.ubuntu.com/bionic/current
+image_bridge: vmbr0
+image_mem: 1024
+image_storage: vm
+
+fw_block_intra: true
+fw_block_intra_group: block-intra-vlan
+fw_default_in: ACCEPT
+fw_default_out: ACCEPT
+
+guest_bridge: "{{ image_bridge }}"
+guest_firewall: true
+guest_ipfilter: true
+guest_searchdomain: auxilium.dk
+guest_dns1: 1.1.1.1
+guest_boot: true
+guest_vlan: 100
+guest_cores: 1
+guest_memory: 1024
+guest_ha: true
+guest_rate_limit: 12.5
+guest_ssh_pub: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILnPVsVXL9p58cq/WXt6OPqJy0qINx0hoDV5/eXLdtou

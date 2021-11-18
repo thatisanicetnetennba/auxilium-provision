@@ -1,0 +1,90 @@
+--- 
+- name: Make sure required variables (ie. variables not in defaults) are defined
+  assert:
+    that: template_id is defined
+
+- name: Generate ID
+  shell: "pvesh get /cluster/nextid"
+  register: guest_id_res
+  
+- name: Set ID fact
+  set_fact: 
+    guest_id: "{{ guest_id_res.stdout }}"
+
+- name: "Clone template {{ template_id }}"
+  shell: "qm clone {{ template_id }} {{ guest_id }} --name {{ guest_name | default('unnamed-'+guest_id) }} --full"
+
+- name: Configure network card
+  shell: "qm set {{ guest_id }} --net0 model=virtio,bridge={{ guest_bridge }},tag={{ guest_vlan }},firewall={{ 1 if guest_firewall else 0 }},rate={{ guest_rate_limit }}"
+
+- name: Enable guest firewall and set default policies
+  shell: "pvesh set /nodes/$(hostname -s)/qemu/{{ guest_id }}/firewall/options --enable 1 --policy_in {{ fw_default_in }} --policy_out {{ fw_default_out }}"
+  when: guest_firewall
+
+- name: Set cores
+  shell: "qm set {{ guest_id }} --cores {{ guest_cores }}"
+
+- name: Set memory
+  shell: "qm set {{ guest_id }} --memory {{ guest_memory }}"
+
+- name: Configure IP
+  shell: "qm set {{ guest_id }} --ipconfig0 ip={{ guest_ipcdr }},gw={{ guest_ip_gw }}"
+  when: 
+    - guest_ipcdr is defined
+    - guest_ip_gw is defined
+
+- name: Configure DNS
+  shell: "qm set {{ guest_id }} --nameserver '{{ guest_dns1}} {{ guest_dns2 | default('') }}' --searchdomain {{ guest_searchdomain }}"
+  when:
+    - guest_dns1 is defined
+    - guest_searchdomain is defined
+
+- name: "[BLOCK] Configure IP filter"
+  when:
+    - guest_ipfilter
+    - guest_ipcdr is defined
+    - guest_ip_gw is defined
+  block:
+    - name: Enable IP filter
+      shell: "pvesh set /nodes/$(hostname -s)/qemu/{{ guest_id }}/firewall/options --ipfilter 1"
+      when: 
+
+    - name: Create IPSet
+      shell: "pvesh create  /nodes/$(hostname -s)/qemu/{{ guest_id }}/firewall/ipset --name ipfilter-net0"
+
+    - name: Add IP-address to IPSet
+      shell: "pvesh create  /nodes/$(hostname -s)/qemu/{{ guest_id }}/firewall/ipset/ipfilter-net0 --cidr {{ guest_ipcdr.split('/')[0] }}/32"
+
+- name: Block intra-VLAN traffic
+  shell: "pvesh create /nodes/$(hostname -s)/qemu/{{ guest_id }}/firewall/rules --enable 1 --type group --action {{ fw_block_intra_group }}"
+  when: 
+    - fw_block_intra_group is defined
+    - fw_block_intra
+    - guest_firewall
+
+- name: Generate name of temp SSH pub key file
+  set_fact:
+    ssh_pub_temp: "/tmp/.{{ 99999 | random | to_uuid }}"
+
+- name: Create SSH pub key
+  copy: 
+    dest: "{{ ssh_pub_temp }}"
+    content: "{{ guest_ssh_pub }}"
+
+- name: Set SSH key
+  shell: "qm set {{ guest_id }} --sshkeys {{ ssh_pub_temp }}"
+
+- name: Cleanup temp SSH pub filter
+  file:
+    path: ssh_pub_temp
+    state: absent
+
+- name: Set start-on-boot
+  shell: "qm set {{ guest_id }} --onboot 1"
+
+- name: Enable HA for guest
+  shell: "ha-manager add vm:{{ guest_id }}"
+  when: guest_ha
+
+- name: Boot guest
+  shell: "qm start {{ guest_id }}"
