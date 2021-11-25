@@ -1,7 +1,24 @@
 --- 
-- name: Make sure required variables (ie. variables not in defaults) are defined
+- name: Make sure required variables (ie. variables not in defaults) are defined and valid
   assert:
-    that: template_id is defined
+    that:
+      - template_id | int
+      - guest_cores | int
+      - guest_memory | int
+      - guest_cores | int > 0
+      - guest_memory | int > 511
+      - fw_default_in in ["ACCEPT", "accept", "REJECT", "reject", "DROP", "drop"]
+      - fw_default_out in ["ACCEPT", "accept", "REJECT", "reject", "DROP", "drop"]
+
+- name: Check if fw_block_intra_group exists
+  shell: "pvesh get /cluster/firewall/groups/{{ fw_block_intra_group }}"
+  register: fw_validate_res
+  failed_when: fw_validate_res.rc > 0
+  changed_when: false
+  when:
+    - fw_block_intra_group is defined
+    - fw_block_intra
+    - guest_firewall
 
 - name: Generate ID
   shell: "pvesh get /cluster/nextid"
@@ -47,7 +64,6 @@
   block:
     - name: Enable IP filter
       shell: "pvesh set /nodes/$(hostname -s)/qemu/{{ guest_id }}/firewall/options --ipfilter 1"
-      when: 
 
     - name: Create IPSet
       shell: "pvesh create  /nodes/$(hostname -s)/qemu/{{ guest_id }}/firewall/ipset --name ipfilter-net0"
