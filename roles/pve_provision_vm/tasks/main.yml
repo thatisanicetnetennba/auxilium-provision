@@ -3,10 +3,10 @@
   include_role:
     name: pve_provision_vm
     tasks_from: build
-  when: image_build | default(false)
+  when: (image_build | default(false)) | bool
 
 - name: Provision VM
   include_role:
     name: pve_provision_vm
     tasks_from: provision
-  when: provision_vm | default(true)
+  when: (provision_vm | default(true)) | bool
