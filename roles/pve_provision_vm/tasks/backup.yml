@@ -8,6 +8,7 @@
   register: validate_res
   failed_when: validate_res.rc > 0
   changed_when: false
+  when: guest_backup_storage is defined
 
 - name: Get storage if guest_backup_storage is not defined
   shell: "pvesh get /storage --type {{ guest_backup_storage_type }} --noborder --noheader"
