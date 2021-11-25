@@ -10,3 +10,9 @@
     name: pve_provision_vm
     tasks_from: provision
   when: (provision_vm | default(true)) | bool
+
+- name: Setup backup schedule
+  include_role:
+    name: pve_provision_vm
+    tasks_from: backup
+  when: (guest_backup | default(false)) | bool

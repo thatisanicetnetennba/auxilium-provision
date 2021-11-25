@@ -23,3 +23,10 @@ guest_memory: 1024
 guest_ha: true
 guest_rate_limit: 12.5
 guest_ssh_pub: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILnPVsVXL9p58cq/WXt6OPqJy0qINx0hoDV5/eXLdtou
+
+guest_backup: false
+guest_backup_starttime: "02:00"
+guest_backup_schedule: "mon,tue,wed,thu,fri,sat,sun"
+guest_backup_storage_type: "pbs"
+guest_backup_storage_fallback: "local-lvm"
+guest_backup_compression: "1"
