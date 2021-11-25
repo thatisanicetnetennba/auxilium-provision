@@ -20,5 +20,5 @@
     guest_backup_storage: "{{ guest_backup_storage_fallback }}"
   when: guest_backup_storage is undefined
 
-- name:
+- name: Create backup schedule
   shell: "pvesh create /cluster/backup --compress {{ guest_backup_compression }} --storage {{ guest_backup_storage }} --vmid {{ guest_id }} --dow {{guest_backup_schedule}} --starttime {{ guest_backup_starttime }}"
